@@ -263,6 +263,39 @@ async function run() {
       res.send(result);
     })
 
+    // stats & analytics
+    app.get('/admin-stats',verifyToken, verifyAdmin, async(req, res)=>{
+      const users = await userCollection.estimatedDocumentCount();
+      const menuItem= await menuCollection.estimatedDocumentCount();
+      const orders  = await paymentCollection.estimatedDocumentCount();
+      // this is not best way
+      // type 1
+      // const payments = await paymentCollection.find().toArray();
+      // const revenue = payments.reduce((total, payment)=> total + payment.price ,0).toFixed(2)
+      // type 2
+      const result = await paymentCollection.aggregate([
+        {
+          $group: {
+            _id: null,
+            totalRevenu: {
+              $sum : '$price'
+            }
+          }
+        }
+      ]).toArray();
+
+      const revenue = result.length > 0 ? result[0].totalRevenu: 0;
+
+
+      res.send({
+        users,
+        menuItem,
+        orders,
+        revenue
+      });
+ 
+    })
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
